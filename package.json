@@ -7,7 +7,7 @@
 	},
 	"scripts": {
 		"build": "tsc",
-		"buildts": "tsc --declaration",
+		"build-ts": "tsc --declaration",
 		"dev": "tsc --watch",
 		"prepare": "npm run build-ts"
 	},
