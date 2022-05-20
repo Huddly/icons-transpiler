@@ -1,14 +1,13 @@
 {
-	"name": "icons-compiler",
+	"name": "@huddly/icons-compiler",
 	"version": "1.0.0",
 	"description": "",
-	"main": "index.js",
 	"bin": {
 		"icons": "bin/icons"
 	},
 	"scripts": {
-		"build": "tsc",
-		"dev": "tsc -w"
+		"build": "tsc --declaration",
+		"dev": "tsc --watch"
 	},
 	"keywords": [],
 	"author": "",
