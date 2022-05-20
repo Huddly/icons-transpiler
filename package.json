@@ -6,10 +6,14 @@
 		"icons": "bin/icons"
 	},
 	"scripts": {
-		"build": "tsc --declaration",
+		"build": "tsc",
+		"buildts": "tsc --declaration",
 		"dev": "tsc --watch",
-		"prepare": "npm run build"
+		"prepare": "npm run build-ts"
 	},
+	"files": [
+		"dist"
+	],
 	"keywords": [],
 	"author": "Rostislav Melkumyan",
 	"license": "ISC",
