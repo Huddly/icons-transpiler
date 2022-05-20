@@ -14,7 +14,9 @@ interface Options {
 }
 
 export async function main(args: Array<any>) {
-	const options = await getOptions(process.cwd());
+	const projectDir = process.cwd();
+	const projectName = require(path.join(projectDir, 'package.json')).name;
+	const options = await getOptions(projectDir);
 
 	switch (args[2]) {
 		case 'build':
@@ -27,9 +29,11 @@ export async function main(args: Array<any>) {
 		case 'readme':
 			if (options.readme) {
 				await svgToReadme({
+					projectName,
 					entry: options.entry,
 					output: options.readme.output,
 					template: options.readme.template,
+					declarationTag: options.readme.declarationTag,
 				});
 			} else {
 				console.error('No readme options provided');

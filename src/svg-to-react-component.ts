@@ -4,12 +4,17 @@ import prettier, { Options as PrettierOptions } from 'prettier';
 import camelCase from 'camelcase';
 import { exists, mkdir, rm, readDir, readFile, writeFile, prettierOptions, logTranspileResult } from './utils';
 
+interface Options {
+	entry: string;
+	output: string;
+}
+
 interface Component {
 	name: string;
 	file: string;
 }
 
-export default async function svgToReactComponent(options: { entry: string; output: string }) {
+export default async function svgToReactComponent(options: Options) {
 	const outputDir = path.resolve(options.output);
 	// Reset
 	if (await exists(outputDir)) {

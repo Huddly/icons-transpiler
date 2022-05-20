@@ -3,7 +3,15 @@ import path from 'path';
 import camelCase from 'camelcase';
 import { readDir, readFile, writeFile, logTranspileResult, basepath } from './utils';
 
-export default async function svgToReadme(options: { entry: string; output: string; template?: string }) {
+interface Options {
+	projectName: string;
+	entry: string;
+	output: string;
+	template?: string;
+	declarationTag?: string;
+}
+
+export default async function svgToReadme(options: Options) {
 	const outputFile = path.join(options.output);
 
 	const allSvgFiles = [];
@@ -45,12 +53,14 @@ export default async function svgToReadme(options: { entry: string; output: stri
 			// add img src
 			const image = `![${file.name}](${file.path})`;
 			const ImportName = camelCase(file.name, { pascalCase: true });
-			const esmImport = `import { ${ImportName} } from '@huddly/frokost/${folder.name.toLowerCase()}`;
+			// Get the name of the package.json file
+			const esmImport = `import { ${ImportName} } from '${options.projectName}/${folder.name.toLowerCase()}`;
 			declarationOut += `\n| ${image} | ${file.name} | \`${esmImport}\` |`;
 		}
 	}
 
-	const readmeOut = readmeTemplate ? readmeTemplate.replace('[icons-declaration]', declarationOut) : declarationOut;
+	const declarationTag = options.declarationTag || '[icons-declaration]';
+	const readmeOut = readmeTemplate ? readmeTemplate.replace(declarationTag, declarationOut) : declarationOut;
 
 	await writeFile(outputFile, readmeOut);
 	logTranspileResult([{ name: basepath(outputFile), file: outputFile }]);
