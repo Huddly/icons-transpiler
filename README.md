@@ -7,7 +7,7 @@ A Node script for converting SVG icons to React components.
 Run the following command to install the library:
 
 ```bash
-npm install Huddly/icons-transpiler --save
+npm install Huddly/icons-transpiler --save-dev
 ```
 
 Add the following scripts to your `package.json`:
