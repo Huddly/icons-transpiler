@@ -1,18 +1,16 @@
 {
 	"compilerOptions": {
-		"outDir": "./dist",
-		"target": "ESNext",
-		"useDefineForClassFields": true,
-		"lib": ["DOM", "DOM.Iterable", "ESNext", "es2015"],
-		"skipLibCheck": true,
-		"esModuleInterop": false,
+		"module": "commonjs",
+		"esModuleInterop": true,
 		"allowSyntheticDefaultImports": true,
-		"strict": true,
-		"module": "ESNext",
-		"moduleResolution": "Node",
-		"resolveJsonModule": true,
-		"isolatedModules": true
+		"target": "es6",
+		"noImplicitAny": true,
+		"moduleResolution": "node",
+		"outDir": "dist",
+		"baseUrl": ".",
+		"paths": {
+			"*": ["node_modules/*", "src/types/*"]
+		}
 	},
-	"include": ["**/*.ts"],
-	"exclude": ["node_modules", "dist"]
+	"include": ["src/**/*"]
 }

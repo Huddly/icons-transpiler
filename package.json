@@ -1,5 +1,5 @@
 {
-	"name": "@huddly/icons-compiler",
+	"name": "@huddly/icons-transpiler",
 	"version": "1.0.0",
 	"description": "",
 	"bin": {

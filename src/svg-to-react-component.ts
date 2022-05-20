@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import prettier, { Options as PrettierOptions } from 'prettier';
 import camelCase from 'camelcase';
-import { exists, mkdir, rm, readDir, readFile, writeFile, prettierOptions, logCompileResult } from './utils';
+import { exists, mkdir, rm, readDir, readFile, writeFile, prettierOptions, logTranspileResult } from './utils';
 
 interface Component {
 	name: string;
@@ -40,7 +40,7 @@ export default async function svgToReactComponent(options: { entry: string; outp
 
 		await createIndexFile(components, path.resolve(options.output, folder));
 	}
-	await logCompileResult(generatedFiles);
+	await logTranspileResult(generatedFiles);
 }
 
 async function convertAllSvgsToReactComponent(

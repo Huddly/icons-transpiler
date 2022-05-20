@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import camelCase from 'camelcase';
-import { readDir, readFile, writeFile, logCompileResult, basepath } from './utils';
+import { readDir, readFile, writeFile, logTranspileResult, basepath } from './utils';
 
 export default async function svgToReadme(options: { entry: string; output: string; template?: string }) {
 	const outputFile = path.join(options.output);
@@ -53,7 +53,7 @@ export default async function svgToReadme(options: { entry: string; output: stri
 	const readmeOut = readmeTemplate ? readmeTemplate.replace('[icons-declaration]', declarationOut) : declarationOut;
 
 	await writeFile(outputFile, readmeOut);
-	logCompileResult([{ name: basepath(outputFile), file: outputFile }]);
+	logTranspileResult([{ name: basepath(outputFile), file: outputFile }]);
 
 	return {
 		name: 'svg-to-readme',

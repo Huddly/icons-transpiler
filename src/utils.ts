@@ -24,7 +24,7 @@ export const prettierOptions: PrettierOptions = {
 	bracketSpacing: true,
 };
 
-export async function logCompileResult(generatedFiles: Array<{ name: string; file: string }>) {
+export async function logTranspileResult(generatedFiles: Array<{ name: string; file: string }>) {
 	const table = new CliTable({
 		head: ['Index', 'Name', 'Path', 'Size'],
 		style: {
