@@ -7,10 +7,11 @@
 	},
 	"scripts": {
 		"build": "tsc --declaration",
-		"dev": "tsc --watch"
+		"dev": "tsc --watch",
+		"prepare": "npm run build"
 	},
 	"keywords": [],
-	"author": "",
+	"author": "Rostislav Melkumyan",
 	"license": "ISC",
 	"dependencies": {
 		"camelcase": "^6.3.0",

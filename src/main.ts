@@ -9,6 +9,7 @@ interface Options {
 	readme?: {
 		output: string;
 		template?: string;
+		declarationTag?: string;
 	};
 }
 
@@ -30,6 +31,8 @@ export async function main(args: Array<any>) {
 					output: options.readme.output,
 					template: options.readme.template,
 				});
+			} else {
+				console.error('No readme options provided');
 			}
 			break;
 		default:
