@@ -48,11 +48,13 @@ async function getOptions(workingDir: string): Promise<Options> {
 		readme: undefined,
 	};
 
+	let parsedConfig = {};
 	const config = path.resolve(workingDir, 'build.config.json');
-	if (!(await exists(config))) {
+	if (await exists(config)) {
+		parsedConfig = JSON.parse(await readFile(config, 'utf8'));
+	} else {
 		console.warn('build.config.js not found, using default options');
 	}
-	const parsedConfig = JSON.parse(await readFile(config, 'utf8'));
 
 	const configObject = {
 		...defaultOptions,
