@@ -43,8 +43,8 @@ export async function main(args: Array<any>) {
 
 async function getOptions(workingDir: string): Promise<Options> {
 	const defaultOptions: Options = {
-		entry: 'src',
-		output: 'dist',
+		entry: './src',
+		output: './dist',
 		readme: undefined,
 	};
 
@@ -62,7 +62,7 @@ async function getOptions(workingDir: string): Promise<Options> {
 	};
 
 	if (!(await exists(configObject.entry))) {
-		throw new Error('Entry folder does not exist');
+		throw new Error(`Entry folder "${configObject.entry}" does not exist`);
 	}
 
 	return configObject;
