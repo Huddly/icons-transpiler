@@ -31,7 +31,7 @@ export default async function svgToReadme(options: Options) {
 			files: svgFilesInFolder.map((file) => {
 				return {
 					name: file.replace('.svg', ''),
-					path: path.join(options.entry, folder, file).replace(' ', '%20'),
+					path: path.join(options.entry, folder, file).replace(/ /g, '%20'),
 				};
 			}),
 		});
