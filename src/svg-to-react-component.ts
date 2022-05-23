@@ -1,8 +1,9 @@
 import fs from 'fs';
 import path from 'path';
-import prettier, { Options as PrettierOptions } from 'prettier';
+import prettier from 'prettier';
 import camelCase from 'camelcase';
 import { exists, mkdir, rm, readDir, readFile, writeFile, prettierOptions, logTranspileResult } from './utils';
+import * as ts from 'typescript';
 
 interface Options {
 	entry: string;
@@ -79,6 +80,16 @@ async function createIndexFile(components: Component[], outputDir: string): Prom
 	}
 	out = prettier.format(out, prettierOptions);
 	await writeFile(indexFile, out);
+	compileTsToJs([indexFile], {
+		module: ts.ModuleKind.CommonJS,
+		noImplicitAny: true,
+		allowSyntheticDefaultImports: true,
+		target: ts.ScriptTarget.ES5,
+		jsx: ts.JsxEmit.ReactJSX,
+		lib: ['es6', 'dom'],
+		emit: ts.EmitFlags.HasEndOfDeclarationMarker,
+		declaration: true,
+	});
 }
 
 async function convertSvgToReactComponent(inputFile: string, outputFile: string, componentName: string): Promise<void> {
@@ -149,4 +160,21 @@ function addElement(elementName: string, elementContent: string, siblingElement:
 		return html.replace(/<\/svg>/, `${fullElement}</svg>`);
 	}
 	return html.replace(`<${siblingElement}`, `${fullElement}<${siblingElement}`);
+}
+
+function compileTsToJs(fileNames: string[], options: ts.CompilerOptions): void {
+	let program = ts.createProgram(fileNames, options);
+	let emitResult = program.emit();
+
+	let allDiagnostics = ts.getPreEmitDiagnostics(program).concat(emitResult.diagnostics);
+
+	allDiagnostics.forEach((diagnostic) => {
+		if (diagnostic.file) {
+			let { line, character } = ts.getLineAndCharacterOfPosition(diagnostic.file, diagnostic.start!);
+			let message = ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n');
+			console.log(`${diagnostic.file.fileName} (${line + 1},${character + 1}): ${message}`);
+		} else {
+			console.log(ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n'));
+		}
+	});
 }
