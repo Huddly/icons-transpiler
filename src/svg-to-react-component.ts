@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import prettier from 'prettier';
 import camelCase from 'camelcase';
-import { exists, mkdir, rm, readDir, readFile, writeFile, prettierOptions, logTranspileResult } from './utils';
+import { exists, mkdir, rm, readDir, readFile, writeFile, prettierOptions } from './utils';
 import * as ts from 'typescript';
 
 interface Options {
@@ -47,7 +47,6 @@ export default async function svgToReactComponent(options: Options) {
 
 		await createIndexFile(components, path.resolve(options.output, folder));
 	}
-	await logTranspileResult(generatedFiles);
 }
 
 async function convertAllSvgsToReactComponent(
@@ -179,14 +178,6 @@ async function compileTsToJs(fileNames: string[], options: ts.CompilerOptions): 
 			console.log(ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n'));
 		}
 	});
-
-	const tsFiles = program
-		.getSourceFiles()
-		.filter((file) => file.fileName.endsWith('.ts') || file.fileName.endsWith('.tsx'))
-		.filter((file) => !file.fileName.endsWith('.d.ts'));
-	for (const file of tsFiles) {
-		await rm(file.fileName);
-	}
 }
 
 async function setPackageJsonExports(file: string) {}
