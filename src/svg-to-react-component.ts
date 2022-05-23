@@ -2,7 +2,17 @@ import fs from 'fs';
 import path from 'path';
 import prettier from 'prettier';
 import camelCase from 'camelcase';
-import { exists, mkdir, rm, readDir, readFile, writeFile, prettierOptions, logTranspileResult } from './utils';
+import {
+	exists,
+	mkdir,
+	rm,
+	readDir,
+	readFile,
+	writeFile,
+	prettierOptions,
+	logTranspileResult,
+	basepath,
+} from './utils';
 import * as ts from 'typescript';
 
 interface Options {
@@ -191,7 +201,8 @@ async function setPackageJsonExports(file: string, folders: string[]): Promise<v
 	const json = JSON.parse(content);
 	json.exports = {};
 	folders.forEach((folder) => {
-		json.exports[`./${folder}`] = {
+		const baseDir = `./${basepath(folder)}`;
+		json.exports[baseDir] = {
 			types: `./${folder}/index.d.ts`,
 			default: `./${folder}/index.js`,
 		};
