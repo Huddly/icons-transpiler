@@ -50,7 +50,7 @@ export default async function svgToReactComponent(options: Options) {
 
 	await setPackageJsonExports(
 		path.resolve(options.projectDir, 'package.json'),
-		folders.map((folder) => path.join(outputDir, folder))
+		folders.map((folder) => path.join(options.output, folder))
 	);
 	await logTranspileResult(generatedFiles);
 }
