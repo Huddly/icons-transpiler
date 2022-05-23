@@ -182,7 +182,8 @@ async function compileTsToJs(fileNames: string[], options: ts.CompilerOptions): 
 
 	const tsFiles = program
 		.getSourceFiles()
-		.filter((file) => file.fileName.endsWith('.ts') && !file.fileName.endsWith('.d.ts'));
+		.filter((file) => file.fileName.endsWith('.ts') || file.fileName.endsWith('.tsx'))
+		.filter((file) => !file.fileName.endsWith('.d.ts'));
 	for (const file of tsFiles) {
 		await rm(file.fileName);
 	}
