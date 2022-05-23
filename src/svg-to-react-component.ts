@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import prettier from 'prettier';
 import camelCase from 'camelcase';
-import { exists, mkdir, rm, readDir, readFile, writeFile, prettierOptions } from './utils';
+import { exists, mkdir, rm, readDir, readFile, writeFile, prettierOptions, logTranspileResult } from './utils';
 import * as ts from 'typescript';
 
 interface Options {
@@ -47,6 +47,12 @@ export default async function svgToReactComponent(options: Options) {
 
 		await createIndexFile(components, path.resolve(options.output, folder));
 	}
+
+	await setPackageJsonExports(
+		path.resolve(options.projectDir, 'package.json'),
+		folders.map((folder) => path.join(outputDir, folder))
+	);
+	await logTranspileResult(generatedFiles);
 }
 
 async function convertAllSvgsToReactComponent(
@@ -180,4 +186,15 @@ async function compileTsToJs(fileNames: string[], options: ts.CompilerOptions): 
 	});
 }
 
-async function setPackageJsonExports(file: string) {}
+async function setPackageJsonExports(file: string, folders: string[]): Promise<void> {
+	const content = await readFile(file, 'utf8');
+	const json = JSON.parse(content);
+	json.exports = {};
+	folders.forEach((folder) => {
+		json.exports[`./${folder}`] = {
+			types: `./${folder}/index.d.ts`,
+			default: `./${folder}/index.js`,
+		};
+	});
+	await writeFile(file, JSON.stringify(json, null, 2));
+}
