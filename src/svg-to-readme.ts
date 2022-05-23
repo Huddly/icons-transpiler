@@ -54,7 +54,7 @@ export default async function svgToReadme(options: Options) {
 			const image = `![${file.name}](${file.path})`;
 			const ImportName = camelCase(file.name, { pascalCase: true });
 			// Get the name of the package.json file
-			const esmImport = `import { ${ImportName} } from '${options.projectName}/${folder.name.toLowerCase()}`;
+			const esmImport = `import { ${ImportName} } from '${options.projectName}/${folder.name.toLowerCase()}'`;
 			declarationOut += `\n| ${image} | ${file.name} | \`${esmImport}\` |`;
 		}
 	}

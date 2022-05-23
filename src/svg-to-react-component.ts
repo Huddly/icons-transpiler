@@ -6,6 +6,7 @@ import { exists, mkdir, rm, readDir, readFile, writeFile, prettierOptions, logTr
 import * as ts from 'typescript';
 
 interface Options {
+	projectDir: string;
 	entry: string;
 	output: string;
 }
@@ -80,7 +81,7 @@ async function createIndexFile(components: Component[], outputDir: string): Prom
 	}
 	out = prettier.format(out, prettierOptions);
 	await writeFile(indexFile, out);
-	compileTsToJs([indexFile], {
+	await compileTsToJs([indexFile], {
 		module: ts.ModuleKind.CommonJS,
 		noImplicitAny: true,
 		allowSyntheticDefaultImports: true,
@@ -89,6 +90,7 @@ async function createIndexFile(components: Component[], outputDir: string): Prom
 		lib: ['es6', 'dom'],
 		emit: ts.EmitFlags.HasEndOfDeclarationMarker,
 		declaration: true,
+		log: false,
 	});
 }
 
@@ -162,7 +164,7 @@ function addElement(elementName: string, elementContent: string, siblingElement:
 	return html.replace(`<${siblingElement}`, `${fullElement}<${siblingElement}`);
 }
 
-function compileTsToJs(fileNames: string[], options: ts.CompilerOptions): void {
+async function compileTsToJs(fileNames: string[], options: ts.CompilerOptions): Promise<void> {
 	let program = ts.createProgram(fileNames, options);
 	let emitResult = program.emit();
 
@@ -177,4 +179,13 @@ function compileTsToJs(fileNames: string[], options: ts.CompilerOptions): void {
 			console.log(ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n'));
 		}
 	});
+
+	const tsFiles = program
+		.getSourceFiles()
+		.filter((file) => file.fileName.endsWith('.ts') && !file.fileName.endsWith('.d.ts'));
+	for (const file of tsFiles) {
+		await rm(file.fileName);
+	}
 }
+
+async function setPackageJsonExports(file: string) {}
