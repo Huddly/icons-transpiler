@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import camelCase from 'camelcase';
-import { readDir, readFile, writeFile, logTranspileResult, basepath } from './utils';
+import { readDir, readFile, writeFile, logTranspileResult, basePath } from './utils';
 
 interface Options {
 	projectName: string;
@@ -54,7 +54,7 @@ export default async function svgToReadme(options: Options) {
 			const image = `![${file.name}](${file.path})`;
 			const ImportName = camelCase(file.name, { pascalCase: true });
 			// Get the name of the package.json file
-			const esmImport = `import { ${ImportName} } from '${options.projectName}/${folder.name.toLowerCase()}`;
+			const esmImport = `import { ${ImportName} } from '${options.projectName}/${folder.name.toLowerCase()}'`;
 			declarationOut += `\n| ${image} | ${file.name} | \`${esmImport}\` |`;
 		}
 	}
@@ -63,7 +63,7 @@ export default async function svgToReadme(options: Options) {
 	const readmeOut = readmeTemplate ? readmeTemplate.replace(declarationTag, declarationOut) : declarationOut;
 
 	await writeFile(outputFile, readmeOut);
-	logTranspileResult([{ name: basepath(outputFile), file: outputFile }]);
+	logTranspileResult([{ name: basePath(outputFile), file: outputFile }]);
 
 	return {
 		name: 'svg-to-readme',

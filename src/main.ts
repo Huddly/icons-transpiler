@@ -22,6 +22,7 @@ export async function main(args: Array<any>) {
 		case 'build':
 		case undefined:
 			await svgToReactComponent({
+				projectDir,
 				entry: options.entry,
 				output: options.output,
 			});

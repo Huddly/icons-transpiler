@@ -1,10 +1,23 @@
 import fs from 'fs';
 import path from 'path';
-import prettier, { Options as PrettierOptions } from 'prettier';
+import prettier from 'prettier';
 import camelCase from 'camelcase';
-import { exists, mkdir, rm, readDir, readFile, writeFile, prettierOptions, logTranspileResult } from './utils';
+import {
+	exists,
+	mkdir,
+	rm,
+	readDir,
+	readFile,
+	writeFile,
+	prettierOptions,
+	logTranspileResult,
+	baseDir,
+	getPathFromABase,
+} from './utils';
+import * as ts from 'typescript';
 
 interface Options {
+	projectDir: string;
 	entry: string;
 	output: string;
 }
@@ -25,6 +38,7 @@ export default async function svgToReactComponent(options: Options) {
 	const folders = ['.'];
 	const allFilesAndFolders = await readDir(options.entry);
 	const generatedFiles = [];
+	const generatedIndexFiles = [];
 	folders.push(...allFilesAndFolders.filter((file) => fs.lstatSync(path.join(options.entry, file)).isDirectory()));
 
 	for (const folder of folders) {
@@ -43,8 +57,33 @@ export default async function svgToReactComponent(options: Options) {
 		);
 		generatedFiles.push(...components);
 
-		await createIndexFile(components, path.resolve(options.output, folder));
+		const indexFilePath = await createIndexFile(components, path.resolve(options.output, folder));
+		generatedIndexFiles.push(indexFilePath);
 	}
+
+	compileTsToJs(generatedIndexFiles, {
+		allowSyntheticDefaultImports: true,
+		declaration: true,
+		jsx: ts.JsxEmit.ReactJSX,
+		module: ts.ModuleKind.CommonJS,
+		target: ts.ScriptTarget.ES5,
+	});
+
+	const packageJson = path.resolve(options.projectDir, 'package.json');
+	const packageJsonContent = JSON.parse(await readFile(packageJson, 'utf8'));
+	packageJsonContent.exports = {};
+	generatedIndexFiles.forEach((folder) => {
+		const key = `./${baseDir(folder)}`;
+		const fileFromBase = getPathFromABase(options.output, folder).replace(/\.ts$/, '.js');
+		const typesFromBase = fileFromBase.replace(/\.js$/, '.d.ts');
+
+		packageJsonContent.exports[key] = {
+			types: `./${typesFromBase}`,
+			default: `./${fileFromBase}`,
+		};
+	});
+	await writeFile(packageJson, JSON.stringify(packageJsonContent, null, 2));
+
 	await logTranspileResult(generatedFiles);
 }
 
@@ -71,7 +110,7 @@ async function convertAllSvgsToReactComponent(
 	return components;
 }
 
-async function createIndexFile(components: Component[], outputDir: string): Promise<void> {
+async function createIndexFile(components: Component[], outputDir: string): Promise<string> {
 	const indexFile = path.join(outputDir, 'index.ts');
 	let out = '';
 	for (const component of components) {
@@ -79,6 +118,7 @@ async function createIndexFile(components: Component[], outputDir: string): Prom
 	}
 	out = prettier.format(out, prettierOptions);
 	await writeFile(indexFile, out);
+	return indexFile;
 }
 
 async function convertSvgToReactComponent(inputFile: string, outputFile: string, componentName: string): Promise<void> {
@@ -149,4 +189,23 @@ function addElement(elementName: string, elementContent: string, siblingElement:
 		return html.replace(/<\/svg>/, `${fullElement}</svg>`);
 	}
 	return html.replace(`<${siblingElement}`, `${fullElement}<${siblingElement}`);
+}
+
+function compileTsToJs(fileNames: string[], options: ts.CompilerOptions): string[] {
+	options.listEmittedFiles = true;
+	const program = ts.createProgram(fileNames, options);
+	const emitResult = program.emit();
+
+	const allDiagnostics = ts.getPreEmitDiagnostics(program).concat(emitResult.diagnostics);
+	allDiagnostics.forEach((diagnostic) => {
+		if (diagnostic.file) {
+			let { line, character } = ts.getLineAndCharacterOfPosition(diagnostic.file, diagnostic.start!);
+			let message = ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n');
+			console.log(`${diagnostic.file.fileName} (${line + 1},${character + 1}): ${message}`);
+		} else {
+			console.log(ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n'));
+		}
+	});
+
+	return emitResult.emittedFiles;
 }
