@@ -1,4 +1,5 @@
 import fs from 'fs';
+import path from 'path';
 import util from 'util';
 import { Options as PrettierOptions } from 'prettier';
 import CliTable from 'cli-table';
@@ -11,7 +12,10 @@ export const readDir = util.promisify(fs.readdir);
 export const writeFile = util.promisify(fs.writeFile);
 export const rm = util.promisify(fs.rm);
 
-export const basepath = (file: string) => file.replace(/^.*[\\\/]/, '');
+export const basePath = (file: string) => file.replace(/^.*[\\\/]/, '');
+
+export const baseDir = (file: string) =>
+	fs.lstatSync(file).isDirectory() ? file.split('/').pop() : file.split('/').slice(-2, -1)[0];
 
 export const prettierOptions: PrettierOptions = {
 	parser: 'typescript',
@@ -49,4 +53,15 @@ export async function logTranspileResult(generatedFiles: Array<{ name: string; f
 export async function getFileSize(filePath: string) {
 	const stats = await stat(filePath);
 	return stats.size;
+}
+
+export function getPathFromABase(base: string, file: string) {
+	const baseRoot = base.split('/')[0];
+	const fileArray = file.split('/');
+	const newRootIndex = fileArray.findIndex((f) => f === baseRoot);
+	if (newRootIndex === -1) {
+		throw new Error(`Could not match ${base} to ${file}`);
+	}
+	fileArray.splice(0, newRootIndex);
+	return fileArray.join('/');
 }

@@ -11,7 +11,8 @@ import {
 	writeFile,
 	prettierOptions,
 	logTranspileResult,
-	basepath,
+	baseDir,
+	getPathFromABase,
 } from './utils';
 import * as ts from 'typescript';
 
@@ -37,6 +38,7 @@ export default async function svgToReactComponent(options: Options) {
 	const folders = ['.'];
 	const allFilesAndFolders = await readDir(options.entry);
 	const generatedFiles = [];
+	const generatedIndexFiles = [];
 	folders.push(...allFilesAndFolders.filter((file) => fs.lstatSync(path.join(options.entry, file)).isDirectory()));
 
 	for (const folder of folders) {
@@ -55,13 +57,33 @@ export default async function svgToReactComponent(options: Options) {
 		);
 		generatedFiles.push(...components);
 
-		await createIndexFile(components, path.resolve(options.output, folder));
+		const indexFilePath = await createIndexFile(components, path.resolve(options.output, folder));
+		generatedIndexFiles.push(indexFilePath);
 	}
 
-	await setPackageJsonExports(
-		path.resolve(options.projectDir, 'package.json'),
-		folders.map((folder) => path.join(options.output, folder))
-	);
+	compileTsToJs(generatedIndexFiles, {
+		allowSyntheticDefaultImports: true,
+		declaration: true,
+		jsx: ts.JsxEmit.ReactJSX,
+		module: ts.ModuleKind.CommonJS,
+		target: ts.ScriptTarget.ES5,
+	});
+
+	const packageJson = path.resolve(options.projectDir, 'package.json');
+	const packageJsonContent = JSON.parse(await readFile(packageJson, 'utf8'));
+	packageJsonContent.exports = {};
+	generatedIndexFiles.forEach((folder) => {
+		const key = `./${baseDir(folder)}`;
+		const fileFromBase = getPathFromABase(options.output, folder).replace(/\.ts$/, '.js');
+		const typesFromBase = fileFromBase.replace(/\.js$/, '.d.ts');
+
+		packageJsonContent.exports[key] = {
+			types: `./${typesFromBase}`,
+			default: `./${fileFromBase}`,
+		};
+	});
+	await writeFile(packageJson, JSON.stringify(packageJsonContent, null, 2));
+
 	await logTranspileResult(generatedFiles);
 }
 
@@ -88,7 +110,7 @@ async function convertAllSvgsToReactComponent(
 	return components;
 }
 
-async function createIndexFile(components: Component[], outputDir: string): Promise<void> {
+async function createIndexFile(components: Component[], outputDir: string): Promise<string> {
 	const indexFile = path.join(outputDir, 'index.ts');
 	let out = '';
 	for (const component of components) {
@@ -96,17 +118,7 @@ async function createIndexFile(components: Component[], outputDir: string): Prom
 	}
 	out = prettier.format(out, prettierOptions);
 	await writeFile(indexFile, out);
-	await compileTsToJs([indexFile], {
-		module: ts.ModuleKind.CommonJS,
-		noImplicitAny: true,
-		allowSyntheticDefaultImports: true,
-		target: ts.ScriptTarget.ES5,
-		jsx: ts.JsxEmit.ReactJSX,
-		lib: ['es6', 'dom'],
-		emit: ts.EmitFlags.HasEndOfDeclarationMarker,
-		declaration: true,
-		log: false,
-	});
+	return indexFile;
 }
 
 async function convertSvgToReactComponent(inputFile: string, outputFile: string, componentName: string): Promise<void> {
@@ -179,12 +191,12 @@ function addElement(elementName: string, elementContent: string, siblingElement:
 	return html.replace(`<${siblingElement}`, `${fullElement}<${siblingElement}`);
 }
 
-async function compileTsToJs(fileNames: string[], options: ts.CompilerOptions): Promise<void> {
-	let program = ts.createProgram(fileNames, options);
-	let emitResult = program.emit();
+function compileTsToJs(fileNames: string[], options: ts.CompilerOptions): string[] {
+	options.listEmittedFiles = true;
+	const program = ts.createProgram(fileNames, options);
+	const emitResult = program.emit();
 
-	let allDiagnostics = ts.getPreEmitDiagnostics(program).concat(emitResult.diagnostics);
-
+	const allDiagnostics = ts.getPreEmitDiagnostics(program).concat(emitResult.diagnostics);
 	allDiagnostics.forEach((diagnostic) => {
 		if (diagnostic.file) {
 			let { line, character } = ts.getLineAndCharacterOfPosition(diagnostic.file, diagnostic.start!);
@@ -194,18 +206,6 @@ async function compileTsToJs(fileNames: string[], options: ts.CompilerOptions): 
 			console.log(ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n'));
 		}
 	});
-}
 
-async function setPackageJsonExports(file: string, folders: string[]): Promise<void> {
-	const content = await readFile(file, 'utf8');
-	const json = JSON.parse(content);
-	json.exports = {};
-	folders.forEach((folder) => {
-		const baseDir = `./${basepath(folder)}`;
-		json.exports[baseDir] = {
-			types: `./${folder}/index.d.ts`,
-			default: `./${folder}/index.js`,
-		};
-	});
-	await writeFile(file, JSON.stringify(json, null, 2));
+	return emitResult.emittedFiles;
 }
