@@ -27,6 +27,7 @@ Add `build.config.json` to your project root. It should look something like this
 {
 	"entry": "src",
 	"output": ".",
+	"generate": ["react", "vue"], // "react", "vue" supported and default
 	"readme": {
 		"output": "README.md",
 		"template": "README.md.template"

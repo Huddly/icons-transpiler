@@ -9,9 +9,10 @@ interface Options {
 	projectDir: string;
 	entry: string;
 	output: string;
+	generate: string[];
 }
 
-interface Component {
+interface GeneratedFiles {
 	name: string;
 	file: string;
 }
@@ -46,13 +47,40 @@ export default async function svgToReactComponent(options: Options) {
 			await mkdir(path.resolve(options.output, folder));
 		}
 
-		const components = await convertAllSvgsToReactComponent(
-			path.join(options.entry, folder),
-			path.join(options.output, folder)
-		);
-		generatedFiles.push(...components);
+		const componentNamesForIndex: string[] = [];
 
-		const indexFilePath = await createIndexFile(components, path.resolve(options.output, folder));
+		const outputPath = path.join(options.output, folder);
+
+		for (const svgFile of svgFiles) {
+			const svgFilePath = path.join(options.entry, folder, svgFile);
+			const svgFileNameWithoutExtension = svgFile.replace(/\.svg$/, '');
+			const svgFileContent = await readFile(svgFilePath, 'utf8');
+			const componentName = camelCase(svgFileNameWithoutExtension, { pascalCase: true });
+
+			componentNamesForIndex.push(componentName);
+
+			// Create react component?
+			if (options.generate.includes('react')) {
+				const reactRes = await createReactComponent(
+					svgFileContent,
+					path.resolve(outputPath, `${componentName}.tsx`),
+					componentName
+				);
+				generatedFiles.push(reactRes);
+			}
+
+			// Create vue component?
+			if (options.generate.includes('vue')) {
+				const vueRes = await createVueComponent(
+					svgFileContent,
+					path.resolve(outputPath, `${componentName}.vue`),
+					componentName
+				);
+				generatedFiles.push(vueRes);
+			}
+		}
+
+		const indexFilePath = await createIndexFile(componentNamesForIndex, path.resolve(options.output, folder));
 		generatedIndexFiles.push(indexFilePath);
 	}
 
@@ -67,42 +95,22 @@ export default async function svgToReactComponent(options: Options) {
 	await logTranspileResult(generatedFiles);
 }
 
-async function convertAllSvgsToReactComponent(
-	entry: string,
-	output: string
-): Promise<Array<{ name: string; file: string }>> {
-	const components: Component[] = [];
-
-	const allFilesAndFolders = await readDir(entry);
-	const svgFiles = allFilesAndFolders.filter((file) => file.endsWith('.svg'));
-	for (const svgFile of svgFiles) {
-		const svgFileName = svgFile.replace(/\.svg$/, '');
-		const componentName = camelCase(svgFileName, { pascalCase: true });
-		const componentFileName = `${componentName}.tsx`;
-		await convertSvgToReactComponent(
-			path.join(entry, svgFile),
-			path.resolve(output, componentFileName),
-			componentName
-		);
-		components.push({ name: componentName, file: path.join(output, componentFileName) });
-	}
-
-	return components;
-}
-
-async function createIndexFile(components: Component[], outputDir: string): Promise<string> {
+async function createIndexFile(components: string[], outputDir: string): Promise<string> {
 	const indexFile = path.join(outputDir, 'index.ts');
 	let out = '';
-	for (const component of components) {
-		out += `export { default as ${component.name}} from './${component.name}';\n`;
+	for (const componentName of components) {
+		out += `export { default as ${componentName}} from './${componentName}';\n`;
 	}
 	out = prettier.format(out, prettierOptions);
 	await writeFile(indexFile, out);
 	return indexFile;
 }
 
-async function convertSvgToReactComponent(inputFile: string, outputFile: string, componentName: string): Promise<void> {
-	const svgContent = await readFile(inputFile, 'utf8');
+async function createReactComponent(
+	svgContent: string,
+	outputFile: string,
+	componentName: string
+): Promise<GeneratedFiles> {
 	let out = `
 	import React from 'react';
 
@@ -112,7 +120,7 @@ async function convertSvgToReactComponent(inputFile: string, outputFile: string,
 		title?: string;
 	}
 
-	const ${componentName} = ({className, color = '#262626', title}: Props) => {
+	const ${componentName} = ({className, color = '#262626', title = '${componentName} icon'}: Props) => {
 		return (${svgContent});
 	};
 	
@@ -120,13 +128,58 @@ async function convertSvgToReactComponent(inputFile: string, outputFile: string,
 	`;
 
 	out = convertDataAttributesToJsxAttributes(out);
-	out = addProp('fill', 'color', 'path', out);
-	out = addProp('className', 'className', 'svg', out);
-	out = addElement('title', `{title || '${componentName} icon'}`, 'path', out);
+	out = addProp('fill', 'color', 'path', out, 'jsx');
+	out = addProp('className', 'className', 'svg', out, 'jsx');
+	out = addElement('title', `{title}`, 'path', out);
 
 	out = prettier.format(out, prettierOptions);
 	try {
 		await writeFile(outputFile, out);
+		return { name: componentName, file: outputFile };
+	} catch (e) {
+		console.error(e);
+	}
+}
+
+async function createVueComponent(
+	svgContent: string,
+	outputFile: string,
+	componentName: string
+): Promise<GeneratedFiles> {
+	let out = `
+	<script lang="ts">
+	import { defineComponent } from 'vue'
+
+	export default defineComponent({
+		name: '${componentName}',
+		props: {
+			color: {
+				type: String,
+				default: '#262626',
+			},
+			title: {
+				type: String,
+				default: '${componentName} icon',
+			},
+		},
+	})
+	</script>
+
+	<template>
+		${svgContent}
+	</template>
+	`;
+
+	out = addProp('fill', "color || '#262626'", 'path', out, 'vue');
+	out = addElement('title', `{{title || '${componentName} icon'}}`, 'path', out);
+
+	out = prettier.format(out, {
+		...prettierOptions,
+		parser: 'vue',
+	});
+	try {
+		await writeFile(outputFile, out);
+		return { name: componentName, file: outputFile };
 	} catch (e) {
 		console.error(e);
 	}
@@ -145,11 +198,26 @@ function convertDataAttributesToJsxAttributes(svg: string): string {
 	return svg;
 }
 
-function addProp(propName: string, propValue: string, targetElement: string, html: string): string {
+function addProp(
+	propName: string,
+	propValue: string,
+	targetElement: string,
+	html: string,
+	lang: 'jsx' | 'vue'
+): string {
 	propName = camelCase(propName);
-	const fullProp = `${propName}={${propValue}}`;
-	let targetHtml = html.match(new RegExp(`<${targetElement}([^>]*)>`, 'g'))![0];
 
+	let fullProp;
+	switch (lang) {
+		case 'jsx':
+			fullProp = `${propName}={${propValue}}`;
+			break;
+		case 'vue':
+			fullProp = `:${propName}="${propValue}"`;
+			break;
+	}
+
+	let targetHtml = html.match(new RegExp(`<${targetElement}([^>]*)>`, 'g'))![0];
 	if (targetHtml.indexOf(`${propName}="`) > -1) {
 		targetHtml = targetHtml.replace(new RegExp(`${propName}="[^"]+"`, 'g'), fullProp);
 	} else {
