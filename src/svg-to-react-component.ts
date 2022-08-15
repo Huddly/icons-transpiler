@@ -69,21 +69,6 @@ export default async function svgToReactComponent(options: Options) {
 		target: ts.ScriptTarget.ES5,
 	});
 
-	const packageJson = path.resolve(options.projectDir, 'package.json');
-	const packageJsonContent = JSON.parse(await readFile(packageJson, 'utf8'));
-	packageJsonContent.exports = {};
-	generatedIndexFiles.forEach((folder) => {
-		const key = `./${baseDir(folder)}`;
-		const fileFromBase = getPathFromABase(options.output, folder).replace(/\.ts$/, '.js');
-		const typesFromBase = fileFromBase.replace(/\.js$/, '.d.ts');
-
-		packageJsonContent.exports[key] = {
-			types: `./${typesFromBase}`,
-			default: `./${fileFromBase}`,
-		};
-	});
-	await writeFile(packageJson, JSON.stringify(packageJsonContent, null, 2));
-
 	await logTranspileResult(generatedFiles);
 }
 
