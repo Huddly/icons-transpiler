@@ -1,12 +1,13 @@
 import fs from 'fs';
 import path from 'path';
 import camelCase from 'camelcase';
-import { readDir, readFile, writeFile, logTranspileResult, basePath } from './utils';
+import { readDir, readFile, writeFile, logTranspileResult, basePath, capitalize } from './utils';
 
 interface Options {
 	projectName: string;
 	entry: string;
 	output: string;
+	iconsOutput: string;
 	template?: string;
 	declarationTag?: string;
 }
@@ -27,7 +28,7 @@ export default async function svgToReadme(options: Options) {
 		if (!svgFilesInFolder.length) continue;
 
 		allSvgFiles.push({
-			name: captialize(folder),
+			name: folder,
 			files: svgFilesInFolder.map((file) => {
 				return {
 					name: file.replace('.svg', ''),
@@ -43,7 +44,7 @@ export default async function svgToReadme(options: Options) {
 	for (const folder of allSvgFiles) {
 		if (!folder.files.length) continue;
 		if (folder.name !== '.') {
-			declarationOut += `\n\n### ${folder.name}`;
+			declarationOut += `\n\n### ${capitalize(folder.name)}`;
 		}
 
 		declarationOut += `\n| Icon | Name | ESM import |`;
@@ -54,7 +55,8 @@ export default async function svgToReadme(options: Options) {
 			const image = `![${file.name}](${file.path})`;
 			const ImportName = camelCase(file.name, { pascalCase: true });
 			// Get the name of the package.json file
-			const esmImport = `import { ${ImportName} } from '${options.projectName}/${folder.name.toLowerCase()}'`;
+			const esmPath = path.join(options.projectName, options.iconsOutput, folder.name);
+			const esmImport = `import { ${ImportName} } from '${esmPath}'`;
 			declarationOut += `\n| ${image} | ${file.name} | \`${esmImport}\` |`;
 		}
 	}
@@ -68,8 +70,4 @@ export default async function svgToReadme(options: Options) {
 	return {
 		name: 'svg-to-readme',
 	};
-}
-
-function captialize(str: string) {
-	return str.charAt(0).toUpperCase() + str.slice(1);
 }

@@ -50,3 +50,7 @@ export async function getFileSize(filePath: string) {
 	const stats = await stat(filePath);
 	return stats.size;
 }
+
+export function capitalize(str: string) {
+	return str.charAt(0).toUpperCase() + str.slice(1);
+}

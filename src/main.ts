@@ -33,6 +33,7 @@ export async function main(args: Array<any>) {
 					projectName,
 					entry: options.entry,
 					output: options.readme.output,
+					iconsOutput: options.output,
 					template: options.readme.template,
 					declarationTag: options.readme.declarationTag,
 				});
