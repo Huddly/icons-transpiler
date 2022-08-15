@@ -49,7 +49,7 @@ export async function main(args: Array<any>) {
 async function getOptions(workingDir: string): Promise<Options> {
 	const defaultOptions: Options = {
 		entry: './src',
-		output: './dist',
+		output: '.',
 		readme: undefined,
 	};
 

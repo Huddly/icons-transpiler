@@ -2,18 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import prettier from 'prettier';
 import camelCase from 'camelcase';
-import {
-	exists,
-	mkdir,
-	rm,
-	readDir,
-	readFile,
-	writeFile,
-	prettierOptions,
-	logTranspileResult,
-	baseDir,
-	getPathFromABase,
-} from './utils';
+import { exists, mkdir, rm, readDir, readFile, writeFile, prettierOptions, logTranspileResult } from './utils';
 import * as ts from 'typescript';
 
 interface Options {
@@ -29,11 +18,9 @@ interface Component {
 
 export default async function svgToReactComponent(options: Options) {
 	const outputDir = path.resolve(options.output);
-	// Reset
-	if (await exists(outputDir)) {
-		await rm(outputDir, { recursive: true });
+	if (!(await exists(outputDir))) {
+		await mkdir(outputDir);
 	}
-	await mkdir(outputDir);
 
 	const folders = ['.'];
 	const allFilesAndFolders = await readDir(options.entry);
@@ -41,15 +28,21 @@ export default async function svgToReactComponent(options: Options) {
 	const generatedIndexFiles = [];
 	folders.push(...allFilesAndFolders.filter((file) => fs.lstatSync(path.join(options.entry, file)).isDirectory()));
 
+	const duplicateFolderNames = folders.find((folder) => path.resolve(folder) === path.resolve(options.entry));
+	if (duplicateFolderNames) {
+		throw new Error(`${duplicateFolderNames}: Path can't be the same as the entry folder`);
+	}
+
 	for (const folder of folders) {
 		const files = await readDir(path.join(options.entry, folder));
 
 		const svgFiles = files.filter((file) => file.endsWith('.svg'));
 		if (!svgFiles.length) continue;
 
-		if (!(await exists(path.resolve(options.output, folder)))) {
-			await mkdir(path.resolve(options.output, folder));
+		if (await exists(path.resolve(options.output, folder))) {
+			await rm(path.resolve(options.output, folder), { recursive: true });
 		}
+		await mkdir(path.resolve(options.output, folder));
 
 		const components = await convertAllSvgsToReactComponent(
 			path.join(options.entry, folder),
