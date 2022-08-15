@@ -2,18 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import prettier from 'prettier';
 import camelCase from 'camelcase';
-import {
-	exists,
-	mkdir,
-	rm,
-	readDir,
-	readFile,
-	writeFile,
-	prettierOptions,
-	logTranspileResult,
-	baseDir,
-	getPathFromABase,
-} from './utils';
+import { exists, mkdir, rm, readDir, readFile, writeFile, prettierOptions, logTranspileResult } from './utils';
 import * as ts from 'typescript';
 
 interface Options {
@@ -29,11 +18,9 @@ interface Component {
 
 export default async function svgToReactComponent(options: Options) {
 	const outputDir = path.resolve(options.output);
-	// Reset
-	if (await exists(outputDir)) {
-		await rm(outputDir, { recursive: true });
+	if (!(await exists(outputDir))) {
+		await mkdir(outputDir);
 	}
-	await mkdir(outputDir);
 
 	const folders = ['.'];
 	const allFilesAndFolders = await readDir(options.entry);
@@ -41,13 +28,21 @@ export default async function svgToReactComponent(options: Options) {
 	const generatedIndexFiles = [];
 	folders.push(...allFilesAndFolders.filter((file) => fs.lstatSync(path.join(options.entry, file)).isDirectory()));
 
+	const duplicateFolderNames = folders.find((folder) => path.resolve(folder) === path.resolve(options.entry));
+	if (duplicateFolderNames) {
+		throw new Error(`${duplicateFolderNames}: Path can't be the same as the entry folder`);
+	}
+
 	for (const folder of folders) {
 		const files = await readDir(path.join(options.entry, folder));
 
 		const svgFiles = files.filter((file) => file.endsWith('.svg'));
 		if (!svgFiles.length) continue;
 
-		if (!(await exists(path.resolve(options.output, folder)))) {
+		if (folder !== '.') {
+			if (await exists(path.resolve(options.output, folder))) {
+				await rm(path.resolve(options.output, folder), { recursive: true });
+			}
 			await mkdir(path.resolve(options.output, folder));
 		}
 
@@ -68,21 +63,6 @@ export default async function svgToReactComponent(options: Options) {
 		module: ts.ModuleKind.CommonJS,
 		target: ts.ScriptTarget.ES5,
 	});
-
-	const packageJson = path.resolve(options.projectDir, 'package.json');
-	const packageJsonContent = JSON.parse(await readFile(packageJson, 'utf8'));
-	packageJsonContent.exports = {};
-	generatedIndexFiles.forEach((folder) => {
-		const key = `./${baseDir(folder)}`;
-		const fileFromBase = getPathFromABase(options.output, folder).replace(/\.ts$/, '.js');
-		const typesFromBase = fileFromBase.replace(/\.js$/, '.d.ts');
-
-		packageJsonContent.exports[key] = {
-			types: `./${typesFromBase}`,
-			default: `./${fileFromBase}`,
-		};
-	});
-	await writeFile(packageJson, JSON.stringify(packageJsonContent, null, 2));
 
 	await logTranspileResult(generatedFiles);
 }
