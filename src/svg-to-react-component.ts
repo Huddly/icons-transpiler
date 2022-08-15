@@ -39,10 +39,12 @@ export default async function svgToReactComponent(options: Options) {
 		const svgFiles = files.filter((file) => file.endsWith('.svg'));
 		if (!svgFiles.length) continue;
 
-		if (await exists(path.resolve(options.output, folder))) {
-			await rm(path.resolve(options.output, folder), { recursive: true });
+		if (folder !== '.') {
+			if (await exists(path.resolve(options.output, folder))) {
+				await rm(path.resolve(options.output, folder), { recursive: true });
+			}
+			await mkdir(path.resolve(options.output, folder));
 		}
-		await mkdir(path.resolve(options.output, folder));
 
 		const components = await convertAllSvgsToReactComponent(
 			path.join(options.entry, folder),
