@@ -12,7 +12,7 @@ interface Options {
 	declarationTag?: string;
 }
 
-export default async function svgToReadme(options: Options) {
+export default async function main(options: Options) {
 	const outputFile = path.join(options.output);
 
 	const allSvgFiles = [];
@@ -46,6 +46,9 @@ export default async function svgToReadme(options: Options) {
 		if (folder.name !== '.') {
 			declarationOut += `\n\n### ${capitalize(folder.name)}`;
 		}
+
+		// Invert the color if darkmode is enabled on GitHub
+		declarationOut += '<style>[data-color-mode="dark"] table td img{filter:invert(100%);}</style>';
 
 		declarationOut += `\n| Icon | Name | ESM import |`;
 		declarationOut += `\n| --- | --- | --- |`;
