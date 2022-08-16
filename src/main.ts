@@ -6,7 +6,7 @@ import { exists, readFile } from './utils';
 interface Options {
 	entry: string;
 	output: string;
-	generate: string[];
+	target: 'jsx' | 'vue';
 	readme?: {
 		output: string;
 		template?: string;
@@ -26,7 +26,7 @@ export async function main(args: Array<any>) {
 				projectDir,
 				entry: options.entry,
 				output: options.output,
-				generate: options.generate,
+				target: options.target,
 			});
 			break;
 		case 'readme':
@@ -53,7 +53,7 @@ async function getOptions(workingDir: string): Promise<Options> {
 	const defaultOptions: Options = {
 		entry: './src',
 		output: '.',
-		generate: ['react', 'vue'],
+		target: 'jsx',
 		readme: undefined,
 	};
 

@@ -9,7 +9,7 @@ interface Options {
 	projectDir: string;
 	entry: string;
 	output: string;
-	generate: string[];
+	target: 'jsx' | 'vue';
 }
 
 interface GeneratedFiles {
@@ -18,26 +18,29 @@ interface GeneratedFiles {
 }
 
 export default async function main(options: Options) {
-	const outputDir = path.resolve(options.output);
-	if (!(await exists(outputDir))) {
-		await mkdir(outputDir);
+	if (options.target !== 'jsx' && options.target !== 'vue') {
+		console.error(`Invalid target: ${options.target}`);
+		return;
 	}
 
 	const folders = ['.'];
 	const allFilesAndFolders = await readDir(options.entry);
 	folders.push(...allFilesAndFolders.filter((file) => fs.lstatSync(path.join(options.entry, file)).isDirectory()));
+	// Check if any of the folders in the entry folder has the same name as the entry folder it self.
+	const collidingFolderNames = folders.find((folder) => path.resolve(folder) === path.resolve(options.entry));
+	if (collidingFolderNames) {
+		const collidingPath = path.resolve(collidingFolderNames);
+		console.error(`Folder "${collidingPath}" can't be the same name as the entry folder "${options.entry}."`);
+		return;
+	}
+
+	const outputDir = path.resolve(options.output);
+	if (!(await exists(outputDir))) {
+		await mkdir(outputDir);
+	}
 
 	const generatedFiles = [];
 	const generatedIndexFiles = [];
-
-	const collidingFolderNames = folders.find((folder) => path.resolve(folder) === path.resolve(options.entry));
-	if (collidingFolderNames) {
-		const absCollidingFolder = path.resolve(collidingFolderNames);
-		console.error(
-			`Error! Folder "${absCollidingFolder}" can't be the same name as the entry folder "${options.entry}."`
-		);
-		return;
-	}
 
 	for (const folder of folders) {
 		const allFilesInFolder = await readDir(path.join(options.entry, folder));
@@ -63,27 +66,25 @@ export default async function main(options: Options) {
 
 			componentNamesForIndex.push(componentName);
 
+			let componentRes: GeneratedFiles;
 			mkdir(path.resolve(outputPath, componentName));
-
-			// Create react component?
-			if (options.generate.includes('react')) {
-				const reactRes = await createReactComponent(
-					svgFileContent,
-					path.resolve(outputPath, componentName, 'index.tsx'),
-					componentName
-				);
-				generatedFiles.push(reactRes);
+			switch (options.target) {
+				case 'jsx':
+					componentRes = await createReactComponent(
+						svgFileContent,
+						path.resolve(outputPath, componentName, 'index.tsx'),
+						componentName
+					);
+					break;
+				case 'vue':
+					componentRes = await createVueComponent(
+						svgFileContent,
+						path.resolve(outputPath, componentName, 'index.vue'),
+						componentName
+					);
+					break;
 			}
-
-			// Create vue component?
-			if (options.generate.includes('vue')) {
-				const vueRes = await createVueComponent(
-					svgFileContent,
-					path.resolve(outputPath, componentName, 'index.vue'),
-					componentName
-				);
-				generatedFiles.push(vueRes);
-			}
+			generatedFiles.push(componentRes);
 		}
 
 		// Generate an index file for this folder

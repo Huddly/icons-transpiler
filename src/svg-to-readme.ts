@@ -41,14 +41,12 @@ export default async function main(options: Options) {
 	let readmeTemplate = options.template ? await readFile(path.resolve(options.template), 'utf8') : null;
 
 	let declarationOut = '';
+
 	for (const folder of allSvgFiles) {
 		if (!folder.files.length) continue;
 		if (folder.name !== '.') {
 			declarationOut += `\n\n### ${capitalize(folder.name)}`;
 		}
-
-		// Invert the color if darkmode is enabled on GitHub
-		declarationOut += '<style>[data-color-mode="dark"] table td img{filter:invert(100%);}</style>';
 
 		declarationOut += `\n| Icon | Name | ESM import |`;
 		declarationOut += `\n| --- | --- | --- |`;
@@ -63,6 +61,8 @@ export default async function main(options: Options) {
 			declarationOut += `\n| ${image} | ${file.name} | \`${esmImport}\` |`;
 		}
 	}
+	// Invert the color if darkmode is enabled on GitHub
+	declarationOut += '\n\n<style>[data-color-mode="dark"] table td img{filter:invert(100%);}</style>';
 
 	const declarationTag = options.declarationTag || '[icons-declaration]';
 	const readmeOut = readmeTemplate ? readmeTemplate.replace(declarationTag, declarationOut) : declarationOut;
