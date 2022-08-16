@@ -17,7 +17,7 @@ interface GeneratedFiles {
 	file: string;
 }
 
-export default async function svgToReactComponent(options: Options) {
+export default async function main(options: Options) {
 	const outputDir = path.resolve(options.output);
 	if (!(await exists(outputDir))) {
 		await mkdir(outputDir);
@@ -25,19 +25,23 @@ export default async function svgToReactComponent(options: Options) {
 
 	const folders = ['.'];
 	const allFilesAndFolders = await readDir(options.entry);
-	const generatedFiles = [];
-	const generatedIndexFiles = [];
 	folders.push(...allFilesAndFolders.filter((file) => fs.lstatSync(path.join(options.entry, file)).isDirectory()));
 
-	const duplicateFolderNames = folders.find((folder) => path.resolve(folder) === path.resolve(options.entry));
-	if (duplicateFolderNames) {
-		throw new Error(`${duplicateFolderNames}: Path can't be the same as the entry folder`);
+	const generatedFiles = [];
+	const generatedIndexFiles = [];
+
+	const collidingFolderNames = folders.find((folder) => path.resolve(folder) === path.resolve(options.entry));
+	if (collidingFolderNames) {
+		const absCollidingFolder = path.resolve(collidingFolderNames);
+		console.error(
+			`Error! Folder "${absCollidingFolder}" can't be the same name as the entry folder "${options.entry}."`
+		);
+		return;
 	}
 
 	for (const folder of folders) {
-		const files = await readDir(path.join(options.entry, folder));
-
-		const svgFiles = files.filter((file) => file.endsWith('.svg'));
+		const allFilesInFolder = await readDir(path.join(options.entry, folder));
+		const svgFiles = allFilesInFolder.filter((file) => file.endsWith('.svg'));
 		if (!svgFiles.length) continue;
 
 		if (folder !== '.') {
@@ -59,11 +63,13 @@ export default async function svgToReactComponent(options: Options) {
 
 			componentNamesForIndex.push(componentName);
 
+			mkdir(path.resolve(outputPath, componentName));
+
 			// Create react component?
 			if (options.generate.includes('react')) {
 				const reactRes = await createReactComponent(
 					svgFileContent,
-					path.resolve(outputPath, `${componentName}.tsx`),
+					path.resolve(outputPath, componentName, 'index.tsx'),
 					componentName
 				);
 				generatedFiles.push(reactRes);
@@ -73,13 +79,14 @@ export default async function svgToReactComponent(options: Options) {
 			if (options.generate.includes('vue')) {
 				const vueRes = await createVueComponent(
 					svgFileContent,
-					path.resolve(outputPath, `${componentName}.vue`),
+					path.resolve(outputPath, componentName, 'index.vue'),
 					componentName
 				);
 				generatedFiles.push(vueRes);
 			}
 		}
 
+		// Generate an index file for this folder
 		const indexFilePath = await createIndexFile(componentNamesForIndex, path.resolve(options.output, folder));
 		generatedIndexFiles.push(indexFilePath);
 	}
