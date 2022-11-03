@@ -60,6 +60,8 @@ export default async function svgToReadme(options: Options) {
 			declarationOut += `\n| ${image} | ${file.name} | \`${esmImport}\` |`;
 		}
 	}
+	// Set TD background color if dark mode is enabled on GitHub
+	declarationOut += '\n\n<style>[data-color-mode="dark"] table td{background:#f5f5f5;}</style>';
 
 	const declarationTag = options.declarationTag || '[icons-declaration]';
 	const readmeOut = readmeTemplate ? readmeTemplate.replace(declarationTag, declarationOut) : declarationOut;
