@@ -52,16 +52,15 @@ export default async function svgToReadme(options: Options) {
 
 		for (const file of folder.files) {
 			// add img src
-			const image = `![${file.name}](${file.path})`;
+			// const image = `![${file.name}](${file.path})`;
+			const imageHtml = `<img src="${file.path}" alt="${file.name}" style="background-color: #fff; padding: 10px; border-radius: 5px;" />`;
 			const ImportName = camelCase(file.name, { pascalCase: true });
 			// Get the name of the package.json file
 			const esmPath = path.join(options.projectName, options.iconsOutput, folder.name);
 			const esmImport = `import { ${ImportName} } from '${esmPath}'`;
-			declarationOut += `\n| ${image} | ${file.name} | \`${esmImport}\` |`;
+			declarationOut += `\n| ${imageHtml} | ${file.name} | \`${esmImport}\` |`;
 		}
 	}
-	// Set TD background color if dark mode is enabled on GitHub
-	declarationOut += '\n\n<style>[data-color-mode="dark"] table td{background:#f5f5f5;}</style>';
 
 	const declarationTag = options.declarationTag || '[icons-declaration]';
 	const readmeOut = readmeTemplate ? readmeTemplate.replace(declarationTag, declarationOut) : declarationOut;
