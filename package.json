@@ -24,6 +24,7 @@
 	"dependencies": {
 		"camelcase": "^6.3.0",
 		"cli-table": "^0.3.11",
+		"esm": "^3.2.25",
 		"prettier": "^2.6.2"
 	},
 	"devDependencies": {
